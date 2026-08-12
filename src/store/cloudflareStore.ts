@@ -102,10 +102,33 @@ export const useCloudflareStore = create<CloudflareStoreState>((set, get) => ({
     set((state) => ({ fallbackCount: state.fallbackCount + 1 }));
   },
 
-  runDiagnostic: async (targetUrl = 'https://freewebnovel.com') => {
+  runDiagnostic: async (targetUrl = 'https://libread.com') => {
     set({ isTesting: true, testResult: null });
     try {
       const startTime = Date.now();
+      const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+      
+      if (isNative) {
+        const { fetchHtml, isCloudflareChallenge } = await import('../services/httpClient');
+        const testUrl = targetUrl.includes('freewebnovel.com') ? 'https://libread.com/sort/most-popular' : targetUrl;
+        const html = await fetchHtml(testUrl);
+        const duration = Date.now() - startTime;
+        const isBlocked = isCloudflareChallenge(html);
+
+        set({
+          testResult: {
+            success: !isBlocked && html.length > 100,
+            statusCode: isBlocked ? 403 : 200,
+            bypassed: true,
+            message: !isBlocked
+              ? `Success (${duration}ms) - Native Mirror Connection Active (${html.length} bytes)`
+              : `Cloudflare Challenge Intercepted (${duration}ms) - Switch domain mirror to LibRead in settings.`,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        });
+        return;
+      }
+
       const res = await fetch(`/api/proxy?url=${encodeURIComponent(targetUrl)}&diagnostic=true`);
       const isBypassed = res.headers.get('X-Cloudflare-Bypassed') === 'true';
       const isShielded = res.headers.get('X-Cloudflare-Shield') === 'intercepted';

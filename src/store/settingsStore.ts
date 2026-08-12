@@ -12,7 +12,7 @@ interface SettingsState extends AppSettings {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      baseDomain: 'https://freewebnovel.com',
+      baseDomain: 'https://libread.com',
       wifiOnlyDownloads: false,
       autoCheckUpdates: true,
       downloadConcurrency: 3,
