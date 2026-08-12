@@ -77,25 +77,32 @@ app.get("/api/proxy", async (req, res) => {
   };
 
   try {
+    // 1. Direct fetch attempt
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const directResponse = await fetch(targetUrl, {
       headers: chromeEmulationHeaders,
       signal: controller.signal,
-    });
+    }).catch(() => null);
 
     clearTimeout(timeout);
 
-    const directBodyText = await directResponse.text();
+    let directBodyText = "";
+    if (directResponse) {
+      directBodyText = await directResponse.text().catch(() => "");
+    }
+
     const isCloudflareChallenge =
+      !directResponse ||
+      !directResponse.ok ||
       directResponse.status === 403 ||
       directResponse.status === 503 ||
       directBodyText.includes("cf-mitigated") ||
       directBodyText.includes("Just a moment...") ||
       directBodyText.includes("Attention Required! | Cloudflare");
 
-    if (!isCloudflareChallenge && directResponse.ok) {
+    if (!isCloudflareChallenge && directBodyText.length > 300) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.send(directBodyText);
     }
@@ -104,47 +111,69 @@ app.get("/api/proxy", async (req, res) => {
     cloudflareStats.blockedRequests++;
     cloudflareStats.lastBlockedTimestamp = new Date().toISOString();
 
-    // Try Countermeasure: Proxy Mirror Bridge Fallback
-    if (cloudflareStats.activeCountermeasures.mirrorBridge) {
-      const mirrorUrls = [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-      ];
-
-      for (const mirrorUrl of mirrorUrls) {
-        try {
-          const mirrorController = new AbortController();
-          const mirrorTimeout = setTimeout(() => mirrorController.abort(), 8000);
-
-          const mirrorRes = await fetch(mirrorUrl, {
-            headers: { "User-Agent": chromeEmulationHeaders["User-Agent"] },
-            signal: mirrorController.signal,
-          });
-
-          clearTimeout(mirrorTimeout);
-
-          if (mirrorRes.ok) {
-            const mirrorHtml = await mirrorRes.text();
-            if (
-              mirrorHtml.length > 300 &&
-              !mirrorHtml.includes("cf-mitigated") &&
-              !mirrorHtml.includes("Just a moment...")
-            ) {
-              cloudflareStats.bypassedRequests++;
-              res.setHeader("X-Cloudflare-Bypassed", "true");
-              res.setHeader("Content-Type", "text/html; charset=utf-8");
-              return res.send(mirrorHtml);
-            }
-          }
-        } catch (mErr) {
-          // Continue to next mirror or fallback
-        }
+    // Generate failover domain candidate
+    let failoverUrl = targetUrl;
+    if (targetUrl.includes("freewebnovel.com")) {
+      failoverUrl = targetUrl
+        .replace("https://freewebnovel.com", "https://libread.com")
+        .replace("/novel/", "/libread/")
+        .replace(".html", "");
+    } else if (targetUrl.includes("libread.com")) {
+      failoverUrl = targetUrl
+        .replace("https://libread.com", "https://freewebnovel.com")
+        .replace("/libread/", "/novel/");
+      if (!failoverUrl.endsWith(".html")) {
+        failoverUrl += ".html";
       }
     }
 
-    // If all countermeasures are blocked by Cloudflare Shield, return 403 with indicator header
+    // List of URLs and CORS bridges to try in sequence
+    const mirrorCandidates = [
+      failoverUrl,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(failoverUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(failoverUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(failoverUrl)}`,
+    ];
+
+    for (const mirrorUrl of mirrorCandidates) {
+      if (mirrorUrl === targetUrl) continue;
+      try {
+        const mirrorController = new AbortController();
+        const mirrorTimeout = setTimeout(() => mirrorController.abort(), 6000);
+
+        const mirrorRes = await fetch(mirrorUrl, {
+          headers: { "User-Agent": chromeEmulationHeaders["User-Agent"] },
+          signal: mirrorController.signal,
+        }).catch(() => null);
+
+        clearTimeout(mirrorTimeout);
+
+        if (mirrorRes && mirrorRes.ok) {
+          const mirrorHtml = await mirrorRes.text().catch(() => "");
+          if (
+            mirrorHtml.length > 300 &&
+            !mirrorHtml.includes("cf-mitigated") &&
+            !mirrorHtml.includes("Just a moment...") &&
+            !mirrorHtml.includes("Attention Required!")
+          ) {
+            cloudflareStats.bypassedRequests++;
+            res.setHeader("X-Cloudflare-Bypassed", "true");
+            res.setHeader("Content-Type", "text/html; charset=utf-8");
+            return res.send(mirrorHtml);
+          }
+        }
+      } catch (mErr) {
+        // Continue to next mirror
+      }
+    }
+
+    // If all countermeasures are blocked, return 200 with cloudflare header so client fetch doesn't throw 403, but returns HTML containing challenge indicator
     res.setHeader("X-Cloudflare-Shield", "intercepted");
-    return res.status(403).send(directBodyText || "Cloudflare Anti-Bot Shield Intercepted Request");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(directBodyText || "<html><body>Just a moment... Cloudflare Anti-Bot Challenge</body></html>");
   } catch (err: any) {
     console.error("Proxy error for:", targetUrl, err.message);
     res.setHeader("X-Cloudflare-Shield", "error");

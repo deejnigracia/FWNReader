@@ -16,33 +16,50 @@ export async function fetchHtml(url: string): Promise<string> {
   const isNative = Capacitor.isNativePlatform();
 
   // Primary attempt
-  let html = await doFetch(url, isNative);
+  let html = '';
+  try {
+    html = await doFetch(url, isNative);
+  } catch (err) {
+    console.warn(`Primary doFetch failed for ${url}:`, err);
+  }
 
   // If blocked by Cloudflare or invalid response, attempt automatic failover mirror
-  if (isCloudflareChallenge(html) || html.length < 100) {
+  if (!html || isCloudflareChallenge(html) || html.length < 100) {
     console.warn(`Direct fetch for ${url} returned Cloudflare challenge or empty response. Attempting mirror failover...`);
 
     let failoverUrl = url;
     if (url.includes('freewebnovel.com')) {
       failoverUrl = url.replace('https://freewebnovel.com', 'https://libread.com')
-        .replace('/most-popular-novel/', '/sort/most-popular')
-        .replace('/latest-release-novel/', '/sort/latest-release')
-        .replace('/completed-novel/', '/sort/completed-novels');
+        .replace('/novel/', '/libread/')
+        .replace('.html', '')
+        .replace('/most-popular-novel/', '/sort/most-popular/')
+        .replace('/latest-release-novel/', '/sort/latest-release/')
+        .replace('/completed-novel/', '/sort/completed-novels/');
     } else if (url.includes('libread.com')) {
-      failoverUrl = url.replace('https://libread.com', 'https://freewebnovel.com');
+      failoverUrl = url.replace('https://libread.com', 'https://freewebnovel.com')
+        .replace('/libread/', '/novel/')
+        .replace('/sort/most-popular/', '/most-popular-novel/')
+        .replace('/sort/latest-release/', '/latest-release-novel/')
+        .replace('/sort/completed-novels/', '/completed-novel/');
+      if (!failoverUrl.endsWith('.html') && !failoverUrl.endsWith('/')) {
+        failoverUrl += '.html';
+      }
     }
 
     try {
       const failoverHtml = await doFetch(failoverUrl, isNative);
-      if (!isCloudflareChallenge(failoverHtml) && failoverHtml.length > 100) {
+      if (failoverHtml && !isCloudflareChallenge(failoverHtml) && failoverHtml.length > 100) {
         return failoverHtml;
+      }
+      if (failoverHtml && failoverHtml.length > html.length) {
+        html = failoverHtml;
       }
     } catch (mErr) {
       console.warn('Failover fetch failed:', mErr);
     }
   }
 
-  if (isCloudflareChallenge(html)) {
+  if (isCloudflareChallenge(html) || !html) {
     throw new Error('Cloudflare Challenge intercepted request.');
   }
 
@@ -92,10 +109,15 @@ async function doFetch(url: string, isNative: boolean): Promise<string> {
     },
   });
 
+  const text = await res.text().catch(() => '');
+  if (text) {
+    return text;
+  }
+
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  return await res.text();
+  return '';
 }
 

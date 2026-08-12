@@ -176,31 +176,39 @@ export function parseChapterContent(html: string): { content: string; prevUrl?: 
   const doc = parser.parseFromString(html, 'text/html');
 
   // Find content container (.txt #content, .txt-content, .reader-content, #chapter-content)
-  const contentEl = doc.querySelector('#content, .txt #content, .txt-content, .m-read .txt, .chapter-entity');
+  const contentEl = doc.querySelector('#content, .txt #content, .txt-content, .m-read .txt, .chapter-entity, .txt, .read-content, .article-content, div[class*="content"], div[id*="content"], .reading-content');
 
   let paragraphs: string[] = [];
 
   if (contentEl) {
     // Remove unwanted elements like script, iframe, ads, header buttons
-    contentEl.querySelectorAll('script, style, ins, .ads, .ad, .chapter-nav, .nav-btn').forEach(el => el.remove());
+    contentEl.querySelectorAll('script, style, ins, .ads, .ad, .chapter-nav, .nav-btn, .a-btn').forEach(el => el.remove());
 
     const pTags = contentEl.querySelectorAll('p');
     if (pTags.length > 0) {
       pTags.forEach(p => {
         const text = p.textContent?.trim();
-        if (text && !text.toLowerCase().includes('freewebnovel') && text.length > 2) {
+        if (text && !text.toLowerCase().includes('freewebnovel.com') && !text.toLowerCase().includes('libread.com') && text.length > 2) {
           paragraphs.push(text);
         }
       });
-    } else {
-      // Split by innerText / innerHTML lines
-      const rawText = contentEl.textContent || '';
-      paragraphs = rawText.split('\n').map(s => s.trim()).filter(s => s.length > 2);
+    }
+
+    if (paragraphs.length === 0) {
+      // Split by innerHTML <br> tags or innerText lines
+      const htmlContent = contentEl.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      const rawText = tempDiv.textContent || '';
+      paragraphs = rawText
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 2 && !s.toLowerCase().includes('freewebnovel.com') && !s.toLowerCase().includes('libread.com'));
     }
   }
 
   // Extract title
-  const titleEl = doc.querySelector('h1, h2, .chapter-title, .tit');
+  const titleEl = doc.querySelector('h1, h2, .chapter-title, .tit, .title');
   const title = titleEl?.textContent?.trim() || '';
 
   // Extract Prev / Next chapter URLs

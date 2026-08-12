@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { fetchHtml, isCloudflareChallenge } from '../services/httpClient';
 
 export interface CloudflareStats {
   totalRequests: number;
@@ -109,7 +110,6 @@ export const useCloudflareStore = create<CloudflareStoreState>((set, get) => ({
       const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
       
       if (isNative) {
-        const { fetchHtml, isCloudflareChallenge } = await import('../services/httpClient');
         const testUrl = targetUrl.includes('freewebnovel.com') ? 'https://libread.com/sort/most-popular' : targetUrl;
         const html = await fetchHtml(testUrl);
         const duration = Date.now() - startTime;

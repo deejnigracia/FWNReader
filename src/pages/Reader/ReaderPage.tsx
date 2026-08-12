@@ -54,9 +54,14 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ novelId, initialChapterI
 
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to load chapter content:', e);
-      setContent('<p className="text-red-400">Failed to load chapter content. Please check your network connection.</p>');
+      setContent(
+        `<div class="bg-[#161618] border border-[#2A2A2E] rounded-2xl p-6 text-center my-8 text-gray-300">
+          <p class="font-semibold text-sm mb-2 text-amber-400">Unable to reach chapter source</p>
+          <p class="text-xs text-gray-400 mb-4">${e?.message || 'Connection or Cloudflare challenge prevented loading this chapter.'}</p>
+        </div>`
+      );
     } finally {
       setIsLoading(false);
     }
