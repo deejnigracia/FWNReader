@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getNovelDetail } from '../../services/freewebnovel';
-import { upsertNovel, getNovelBySlug, addToLibrary, removeFromLibrary, updateNovelCategory, getCategories } from '../../services/novelsRepo';
+import { upsertNovel, getNovelBySlug, addToLibrary, removeFromLibrary, updateNovelCategory, getCategories, addCategory } from '../../services/novelsRepo';
 import { saveChapters, getChaptersForNovel, markChapterRead, deleteDownloadedChapter, updateChapterContent } from '../../services/chaptersRepo';
 import { getReadingProgress } from '../../services/progressRepo';
 import { downloadQueue, DownloadProgressEvent } from '../../services/downloadQueue';
@@ -315,7 +315,7 @@ export const NovelDetailPage: React.FC<NovelDetailPageProps> = ({ slug, onBack, 
         selectedCategoryId={novel?.category_id || null}
         onSelectCategory={handleSelectCategory}
         onCreateCategory={async (name) => {
-          const cat = await import('../../services/novelsRepo').then((m) => m.addCategory(name));
+          const cat = await addCategory(name);
           setCategories((prev) => [...prev, cat]);
           handleSelectCategory(cat.id);
         }}
