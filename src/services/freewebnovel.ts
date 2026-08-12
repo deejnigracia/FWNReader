@@ -3,7 +3,7 @@ import { parseSearch, parseNovelPage, parseChapterContent } from './parser';
 import { ScrapedSearchResult, Novel, Chapter } from '../types';
 import { useCloudflareStore } from '../store/cloudflareStore';
 
-const DEFAULT_BASE_DOMAIN = 'https://freewebnovel.com';
+const DEFAULT_BASE_DOMAIN = 'https://libread.com';
 
 // Realistic sample novels dataset for instant fallback or browser testing
 const MOCK_NOVELS: Array<{ novel: Partial<Novel>; chapters: Partial<Chapter>[] }> = [
@@ -140,8 +140,15 @@ export async function searchNovels(query: string, baseDomain: string = DEFAULT_B
 export async function getBrowseNovels(category: string = 'most-popular', page: number = 1, baseDomain: string = DEFAULT_BASE_DOMAIN): Promise<ScrapedSearchResult[]> {
   try {
     let url = `${baseDomain.replace(/\/$/, '')}/most-popular-novel/`;
-    if (category === 'latest-release') url = `${baseDomain.replace(/\/$/, '')}/latest-release-novel/`;
-    if (category === 'completed') url = `${baseDomain.replace(/\/$/, '')}/completed-novel/`;
+    if (baseDomain.includes('libread')) {
+      url = `${baseDomain.replace(/\/$/, '')}/sort/most-popular/`;
+      if (category === 'latest-release') url = `${baseDomain.replace(/\/$/, '')}/sort/latest-release/`;
+      if (category === 'completed') url = `${baseDomain.replace(/\/$/, '')}/sort/completed-novels/`;
+    } else {
+      if (category === 'latest-release') url = `${baseDomain.replace(/\/$/, '')}/latest-release-novel/`;
+      if (category === 'completed') url = `${baseDomain.replace(/\/$/, '')}/completed-novel/`;
+    }
+
     if (category.startsWith('genre-')) {
       const g = category.replace('genre-', '');
       url = `${baseDomain.replace(/\/$/, '')}/genre/${g}/`;
@@ -175,11 +182,19 @@ export async function getBrowseNovels(category: string = 'most-popular', page: n
 
 export async function getNovelDetail(slug: string, baseDomain: string = DEFAULT_BASE_DOMAIN): Promise<{ novel: Partial<Novel>; chapters: Partial<Chapter>[] }> {
   try {
-    const url = `${baseDomain.replace(/\/$/, '')}/novel/${slug}.html`;
+    let url = slug.startsWith('http') ? slug : `${baseDomain.replace(/\/$/, '')}/novel/${slug}.html`;
+    if (!slug.startsWith('http')) {
+      if (baseDomain.includes('libread') || slug.includes('libread')) {
+        const cleanSlug = slug.replace(/^\/libread\//, '').replace(/^libread\//, '');
+        url = `${baseDomain.replace(/\/$/, '')}/libread/${cleanSlug}`;
+      }
+    }
+
     const html = await fetchHtml(url);
     const parsed = parseNovelPage(html, url, slug, baseDomain);
 
     if (parsed.novel.title && parsed.chapters.length > 0) {
+      useCloudflareStore.getState().fetchStats();
       return parsed;
     }
   } catch (err) {

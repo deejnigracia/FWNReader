@@ -50,8 +50,52 @@ export const SettingsPage: React.FC = () => {
 
           <div className="space-y-3">
             <div>
+              <label className="text-xs text-[#94949D] block mb-1.5 font-medium">
+                Preset Mirror Sources
+              </label>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDomainInput('https://libread.com');
+                    setBaseDomain('https://libread.com');
+                    setIsSaved(true);
+                    setTimeout(() => setIsSaved(false), 2000);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-medium text-left transition-all ${
+                    baseDomain.includes('libread')
+                      ? 'border-[#E09F3E] bg-[#E09F3E]/10 text-[#E09F3E]'
+                      : 'border-[#2A2A2E] bg-[#0A0A0B] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <div className="font-bold flex items-center justify-between">
+                    LibRead Mirror
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md font-normal">Fast</span>
+                  </div>
+                  <div className="text-[10px] opacity-70">Unblocked direct mirror</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDomainInput('https://freewebnovel.com');
+                    setBaseDomain('https://freewebnovel.com');
+                    setIsSaved(true);
+                    setTimeout(() => setIsSaved(false), 2000);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-medium text-left transition-all ${
+                    baseDomain.includes('freewebnovel.com')
+                      ? 'border-[#E09F3E] bg-[#E09F3E]/10 text-[#E09F3E]'
+                      : 'border-[#2A2A2E] bg-[#0A0A0B] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <div className="font-bold">FreeWebNovel</div>
+                  <div className="text-[10px] opacity-70">Original site</div>
+                </button>
+              </div>
+
               <label className="text-xs text-[#94949D] block mb-1 font-medium">
-                Target Domain
+                Custom Domain
               </label>
               <div className="flex gap-2">
                 <input
