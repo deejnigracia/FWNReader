@@ -229,7 +229,7 @@ export function parseChapterContent(html: string): { content: string; prevUrl?: 
   });
 
   return {
-    content: paragraphs.join('\n\n'),
+    content: paragraphs.map(p => `<p>${p}</p>`).join('\n'),
     title,
     prevUrl,
     nextUrl,

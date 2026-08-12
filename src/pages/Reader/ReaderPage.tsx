@@ -13,6 +13,72 @@ interface ReaderPageProps {
   onBack: () => void;
 }
 
+function formatContentToParagraphs(raw: string): string {
+  if (!raw) return '';
+
+  // If raw HTML contains error or alert containers, pass as-is
+  if (raw.includes('bg-[#161618]') || raw.includes('Unable to reach chapter source')) {
+    return raw;
+  }
+
+  // Extract paragraphs if <p> tags are present
+  if (raw.includes('<p>') || raw.includes('<p ') || raw.includes('</p>')) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(raw, 'text/html');
+    const pEls = doc.querySelectorAll('p');
+    if (pEls.length > 0) {
+      const formatted: string[] = [];
+      pEls.forEach((p) => {
+        let htmlContent = p.innerHTML.trim();
+        // Unwrap if entire paragraph is wrapped in <strong> or <b>
+        if (
+          (htmlContent.startsWith('<strong>') && htmlContent.endsWith('</strong>')) ||
+          (htmlContent.startsWith('<b>') && htmlContent.endsWith('</b>'))
+        ) {
+          const temp = document.createElement('div');
+          temp.innerHTML = htmlContent;
+          htmlContent = temp.innerHTML.replace(/^<b[^>]*>|<strong[^>]*>|<\/b>|<\/strong>/gi, '').trim();
+        }
+
+        const plainText = p.textContent?.trim() || '';
+        if (
+          plainText.length > 1 &&
+          !plainText.toLowerCase().includes('freewebnovel.com') &&
+          !plainText.toLowerCase().includes('libread.com')
+        ) {
+          formatted.push(`<p class="mb-5 leading-relaxed font-normal">${htmlContent}</p>`);
+        }
+      });
+
+      if (formatted.length > 0) {
+        return formatted.join('');
+      }
+    }
+  }
+
+  // Fallback: Split plain text by newlines or <br> tags
+  const cleanText = raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '');
+
+  const lines = cleanText.split('\n');
+  const paragraphs: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (
+      trimmed.length > 1 &&
+      !trimmed.toLowerCase().includes('freewebnovel.com') &&
+      !trimmed.toLowerCase().includes('libread.com')
+    ) {
+      paragraphs.push(`<p class="mb-5 leading-relaxed font-normal">${trimmed}</p>`);
+    }
+  }
+
+  return paragraphs.join('');
+}
+
 export const ReaderPage: React.FC<ReaderPageProps> = ({ novelId, initialChapterId, onBack }) => {
   const { baseDomain } = useSettingsStore();
   const { fontSize, fontFamily, theme, lineHeight, setFontSize, setFontFamily, setTheme, setLineHeight } = useReaderPrefsStore();
@@ -136,32 +202,51 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ novelId, initialChapterI
       {showSettings && (
         <div className="fixed top-14 left-0 right-0 z-50 bg-[#161618] border-b border-[#2A2A2E] p-4 max-w-2xl mx-auto shadow-2xl animate-in slide-in-from-top-2 duration-150">
           <div className="space-y-4">
-            {/* Font Size */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#94949D] block mb-1.5">
-                Font Size: {fontSize}px
-              </label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setFontSize(Math.max(12, fontSize - 1))}
-                  className="px-3 py-1 bg-[#0A0A0B] border border-[#2A2A2E] text-xs font-bold rounded-lg text-[#E1E1E6]"
-                >
-                  A-
-                </button>
-                <input
-                  type="range"
-                  min="12"
-                  max="28"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="flex-1 accent-[#E09F3E]"
-                />
-                <button
-                  onClick={() => setFontSize(Math.min(28, fontSize + 1))}
-                  className="px-3 py-1 bg-[#0A0A0B] border border-[#2A2A2E] text-xs font-bold rounded-lg text-[#E1E1E6]"
-                >
-                  A+
-                </button>
+            {/* Font Size & Line Height */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-[#94949D] block mb-1.5">
+                  Font Size: {fontSize}px
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFontSize(Math.max(12, fontSize - 1))}
+                    className="px-2.5 py-1 bg-[#0A0A0B] border border-[#2A2A2E] text-xs font-bold rounded-lg text-[#E1E1E6]"
+                  >
+                    A-
+                  </button>
+                  <input
+                    type="range"
+                    min="12"
+                    max="28"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    className="flex-1 accent-[#E09F3E]"
+                  />
+                  <button
+                    onClick={() => setFontSize(Math.min(28, fontSize + 1))}
+                    className="px-2.5 py-1 bg-[#0A0A0B] border border-[#2A2A2E] text-xs font-bold rounded-lg text-[#E1E1E6]"
+                  >
+                    A+
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-[#94949D] block mb-1.5">
+                  Line Spacing: {lineHeight}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="1.3"
+                    max="2.4"
+                    step="0.1"
+                    value={lineHeight}
+                    onChange={(e) => setLineHeight(Number(e.target.value))}
+                    className="flex-1 accent-[#E09F3E]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -217,7 +302,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ novelId, initialChapterI
             <p className="text-xs font-mono">Fetching chapter content...</p>
           </div>
         ) : (
-          <article className={fontFamilies}>
+          <article className={`${fontFamilies} font-normal`}>
             <h1 className="text-xl font-bold mb-6 text-center text-[#E09F3E] border-b border-[#2A2A2E] pb-4">
               {currentChapter.title}
             </h1>
@@ -225,8 +310,8 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ novelId, initialChapterI
             <div
               ref={contentRef}
               style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
-              className="space-y-4 tracking-normal"
-              dangerouslySetInnerHTML={{ __html: content }}
+              className="tracking-normal font-normal text-slate-200 antialiased [&>p]:mb-6 [&>p]:leading-relaxed [&>p]:font-normal"
+              dangerouslySetInnerHTML={{ __html: formatContentToParagraphs(content) }}
             />
           </article>
         )}
