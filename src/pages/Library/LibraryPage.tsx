@@ -121,9 +121,9 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onSelectNovel, onGoToB
         />
       ) : (
         <div className="grid grid-cols-2 gap-3.5">
-          {filteredNovels.map((novel) => (
+          {filteredNovels.map((novel, index) => (
             <NovelCard
-              key={novel.slug}
+              key={`${novel.slug}-${index}`}
               novel={novel}
               inLibrary={true}
               onClick={() => onSelectNovel(novel.slug)}

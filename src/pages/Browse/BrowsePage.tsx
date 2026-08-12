@@ -140,9 +140,9 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ onSelectNovel, onOpenSea
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3.5">
-          {novels.map((novel) => (
+          {novels.map((novel, index) => (
             <NovelCard
-              key={novel.slug}
+              key={`${novel.slug}-${index}`}
               novel={novel}
               onClick={() => onSelectNovel(novel.slug)}
             />

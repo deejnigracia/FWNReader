@@ -294,9 +294,9 @@ export const NovelDetailPage: React.FC<NovelDetailPageProps> = ({ slug, onBack, 
 
           {/* Chapters List */}
           <div className="space-y-2">
-            {filteredChapters.map((chap) => (
+            {filteredChapters.map((chap, idx) => (
               <ChapterRow
-                key={chap.id}
+                key={`${chap.id}-${idx}`}
                 chapter={chap}
                 onRead={() => onReadChapter(novel.id, chap.id)}
                 onToggleRead={(e) => handleToggleRead(e, chap)}
@@ -305,7 +305,17 @@ export const NovelDetailPage: React.FC<NovelDetailPageProps> = ({ slug, onBack, 
             ))}
           </div>
         </>
-      ) : null}
+      ) : (
+        <div className="bg-[#161618] border border-[#2A2A2E] rounded-2xl p-6 text-center text-gray-300 my-8">
+          <p className="text-sm font-medium mb-3 text-gray-300">Failed to load novel details or source is unreachable.</p>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-[#E09F3E] hover:bg-[#C88A32] text-black font-semibold text-xs rounded-xl transition-all"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
       {/* Category Picker Modal */}
       <CategoryModal

@@ -115,9 +115,9 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onBack, onSelectNovel })
           </h3>
 
           <div className="flex flex-col gap-3">
-            {results.map((novel) => (
+            {results.map((novel, index) => (
               <NovelCard
-                key={novel.slug}
+                key={`${novel.slug}-${index}`}
                 novel={novel}
                 layout="list"
                 onClick={() => onSelectNovel(novel.slug)}

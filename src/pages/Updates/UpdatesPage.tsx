@@ -71,8 +71,8 @@ export const UpdatesPage: React.FC<UpdatesPageProps> = ({ onReadChapter }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {updates.map((item) => (
-            <div key={item.novel.id} className="bg-[#161618] border border-[#2A2A2E] rounded-xl p-3.5 shadow-md">
+          {updates.map((item, index) => (
+            <div key={`${item.novel.id}-${index}`} className="bg-[#161618] border border-[#2A2A2E] rounded-xl p-3.5 shadow-md">
               <div className="flex items-center gap-3 mb-2.5 pb-2 border-b border-[#2A2A2E]">
                 <img
                   src={item.novel.cover_url}
@@ -90,9 +90,9 @@ export const UpdatesPage: React.FC<UpdatesPageProps> = ({ onReadChapter }) => {
               </div>
 
               <div className="space-y-1.5">
-                {item.newChapters.map((chap) => (
+                {item.newChapters.map((chap, idx) => (
                   <ChapterRow
-                    key={chap.id}
+                    key={`${chap.id}-${idx}`}
                     chapter={chap}
                     onRead={() => onReadChapter(item.novel.id, chap.id)}
                     onToggleRead={async (e) => {

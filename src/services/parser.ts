@@ -1,9 +1,29 @@
 import { ScrapedSearchResult, Novel, Chapter } from '../types';
 
+export function normalizeCoverUrl(rawUrl: string, baseDomain: string): string {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim();
+
+  if (url.startsWith('//')) {
+    url = `https:${url}`;
+  } else if (!url.startsWith('http')) {
+    const cleanDomain = baseDomain.replace(/\/$/, '');
+    url = `${cleanDomain}/${url.replace(/^\//, '')}`;
+  }
+
+  // Redirect freewebnovel image CDN requests to unblocked libread mirror CDN
+  if (url.includes('freewebnovel.com/files/article/')) {
+    url = url.replace('freewebnovel.com', 'libread.com');
+  }
+
+  return url;
+}
+
 export function parseSearch(html: string, baseDomain: string): ScrapedSearchResult[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const results: ScrapedSearchResult[] = [];
+  const seenSlugs = new Set<string>();
 
   // Try standard freewebnovel search list items (.li-row, .con, .col-content .item)
   const items = doc.querySelectorAll('.li-row, .col-content .item, .col-content .li, .search-result .item');
@@ -18,15 +38,18 @@ export function parseSearch(html: string, baseDomain: string): ScrapedSearchResu
       href = `${baseDomain.replace(/\/$/, '')}/${href.replace(/^\//, '')}`;
     }
 
-    // Extract slug from href e.g. /novel/lord-of-the-mysteries.html
-    const slugMatch = href.match(/\/novel\/([^/]+)/) || href.match(/\/([^/]+)\.html/);
-    const slug = slugMatch ? slugMatch[1].replace('.html', '') : title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    // Extract slug from href e.g. /novel/lord-of-the-mysteries.html or /libread/shadow-slave-227142
+    const slugMatch = href.match(/\/novel\/([^/]+)/) || href.match(/\/libread\/([^/]+)/) || href.match(/\/([^/]+)\.html/);
+    const rawSlug = slugMatch ? slugMatch[1].replace('.html', '') : title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const slug = rawSlug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    if (seenSlugs.has(slug)) return;
+    seenSlugs.add(slug);
 
     const imgEl = item.querySelector('img');
-    let coverUrl = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || '';
-    if (coverUrl && !coverUrl.startsWith('http')) {
-      coverUrl = `${baseDomain.replace(/\/$/, '')}/${coverUrl.replace(/^\//, '')}`;
-    }
+    const rawCover = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || imgEl?.getAttribute('data-original') || imgEl?.getAttribute('data-lazy-src') || '';
+    
+    let coverUrl = normalizeCoverUrl(rawCover, baseDomain);
 
     const authorEl = item.querySelector('.author, .item-author, .s1, .s2');
     const author = authorEl?.textContent?.replace(/Author[:\s]*/i, '').trim() || 'Unknown';
@@ -62,11 +85,13 @@ export function parseNovelPage(html: string, url: string, slug: string, baseDoma
   const title = titleEl?.textContent?.trim() || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   // Cover
-  const imgEl = doc.querySelector('.m-desc .pic img, .novel-cover img, .col-left img');
-  let coverUrl = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || '';
-  if (coverUrl && !coverUrl.startsWith('http')) {
-    coverUrl = `${baseDomain.replace(/\/$/, '')}/${coverUrl.replace(/^\//, '')}`;
-  }
+  const metaOgImg = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+                    doc.querySelector('meta[name="image"]')?.getAttribute('content');
+
+  const imgEl = doc.querySelector('.m-book1 .pic img, .m-desc .pic img, .pic img, .novel-cover img, .col-left img');
+  const rawCover = metaOgImg || imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || imgEl?.getAttribute('data-original') || '';
+
+  let coverUrl = normalizeCoverUrl(rawCover, baseDomain);
   if (!coverUrl) {
     coverUrl = `https://picsum.photos/seed/${slug}/300/400`;
   }

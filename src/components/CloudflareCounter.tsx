@@ -97,7 +97,7 @@ export const CloudflareCounter: React.FC<CloudflareCounterProps> = ({ compact = 
       </div>
 
       {/* Counter Metrics Grid */}
-      <div className="grid grid-cols-4 gap-2 text-center mt-2">
+      <div className="grid grid-cols-3 gap-2 text-center mt-2">
         <div className="bg-[#111113] p-2.5 rounded-lg border border-[#2A2A2E]">
           <div className="text-lg font-mono font-bold text-amber-400">{blockedRequests}</div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">CF Intercepted</div>
@@ -105,10 +105,6 @@ export const CloudflareCounter: React.FC<CloudflareCounterProps> = ({ compact = 
         <div className="bg-[#111113] p-2.5 rounded-lg border border-[#2A2A2E]">
           <div className="text-lg font-mono font-bold text-emerald-400">{bypassedRequests}</div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Bypassed</div>
-        </div>
-        <div className="bg-[#111113] p-2.5 rounded-lg border border-[#2A2A2E]">
-          <div className="text-lg font-mono font-bold text-sky-400">{fallbackCount}</div>
-          <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Mock Fallback</div>
         </div>
         <div className="bg-[#111113] p-2.5 rounded-lg border border-[#2A2A2E]">
           <div className="text-lg font-mono font-bold text-gray-300">{totalRequests}</div>
@@ -157,7 +153,7 @@ const CloudflareModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
 
         {/* Counter Stats */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-[#111113] p-3 rounded-xl border border-[#2A2A2E] text-center">
             <div className="text-xl font-mono font-bold text-amber-400">{blockedRequests}</div>
             <div className="text-[11px] text-gray-400 font-medium">Cloudflare Blocked</div>
@@ -165,10 +161,6 @@ const CloudflareModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="bg-[#111113] p-3 rounded-xl border border-[#2A2A2E] text-center">
             <div className="text-xl font-mono font-bold text-emerald-400">{bypassedRequests}</div>
             <div className="text-[11px] text-gray-400 font-medium">Bypassed Requests</div>
-          </div>
-          <div className="bg-[#111113] p-3 rounded-xl border border-[#2A2A2E] text-center">
-            <div className="text-xl font-mono font-bold text-sky-400">{fallbackCount}</div>
-            <div className="text-[11px] text-gray-400 font-medium">Offline Dataset</div>
           </div>
         </div>
 
