@@ -1,0 +1,6 @@
+{
+  "name": "FreeWebNovel Reader",
+  "description": "An Android & web novel reader app for FreeWebNovel with local storage, offline downloads, chapter progress, and customizable reader themes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

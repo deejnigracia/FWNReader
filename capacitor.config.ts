@@ -1,0 +1,20 @@
+const config = {
+  appId: 'com.freewebnovel.reader',
+  appName: 'FreeWebNovel Reader',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
+  plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+    CapacitorSQLite: {
+      iosDatabaseLocation: 'Library/CapacitorDatabase',
+      iosIsEncryption: false,
+      androidIsEncryption: false,
+    }
+  }
+};
+
+export default config;
